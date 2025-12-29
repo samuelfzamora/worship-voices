@@ -241,6 +241,7 @@ progress.addEventListener('input', () => {
   pauseTime = Number(progress.value);
   if (isPlaying) {
     pause();
+    pauseTime = Number(progress.value);
     play();
   }
 });
