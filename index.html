@@ -118,7 +118,6 @@ async function initAudio() {
 }
 
 async function loadBuffer(url) {
-  alert(url);
   const res = await fetch(url);
   const arrayBuffer = await res.arrayBuffer();
   return await audioCtx.decodeAudioData(arrayBuffer);
@@ -194,3 +193,4 @@ songSelect.addEventListener('change', async () => {
 
 </body>
 </html>
+
