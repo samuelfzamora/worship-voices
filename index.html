@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Práctica de Voces – Worship</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #f5f6fa;
+  padding: 20px;
+}
+
+.card {
+  max-width: 420px;
+  background: white;
+  margin: auto;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+}
+
+h2 {
+  text-align: center;
+  margin-top: 0;
+}
+
+label {
+  font-weight: bold;
+  margin-top: 15px;
+  display: block;
+}
+
+select, button, input[type=range] {
+  width: 100%;
+  margin-top: 8px;
+}
+
+button {
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: none;
+  background: #4a69bd;
+  color: white;
+  margin-top: 10px;
+}
+
+button.secondary {
+  background: #dcdde1;
+  color: #333;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.controls button {
+  flex: 1;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>🎶 Práctica de Voces</h2>
+
+  <label>Canción</label>
+  <select id="songSelect">
+    <option value="asi-peleo">Así peleo mis batallas</option>
+    <option value="santo-espiritu">Santo Espíritu</option>
+  </select>
+
+  <button onclick="play()">▶ Play</button>
+  <button class="secondary" onclick="pause()">⏸ Pause</button>
+
+  <div class="controls">
+    <button class="secondary" onclick="seek(-10)">⏪ -10s</button>
+    <button class="secondary" onclick="seek(10)">⏩ +10s</button>
+  </div>
+
+  <label>🎤 Voz 1</label>
+  <input type="range" min="0" max="1" step="0.01" value="1"
+         oninput="gainVoz1.gain.value = this.value">
+
+  <label>🎤 Voz 2</label>
+  <input type="range" min="0" max="1" step="0.01" value="1"
+         oninput="gainVoz2.gain.value = this.value">
+</div>
+
+<script>
+let audioCtx;
+let buffers = {};
+let sources = {};
+let gainTrack, gainVoz1, gainVoz2;
+
+let startTime = 0;
+let pauseTime = 0;
+let isPlaying = false;
+
+const songSelect = document.getElementById('songSelect');
+
+async function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  gainTrack = audioCtx.createGain();
+  gainVoz1 = audioCtx.createGain();
+  gainVoz2 = audioCtx.createGain();
+
+  gainTrack.connect(audioCtx.destination);
+  gainVoz1.connect(audioCtx.destination);
+  gainVoz2.connect(audioCtx.destination);
+
+  await loadSong();
+}
+
+async function loadBuffer(url) {
+  alert(url);
+  const res = await fetch(url);
+  const arrayBuffer = await res.arrayBuffer();
+  return await audioCtx.decodeAudioData(arrayBuffer);
+}
+
+async function loadSong() {
+  const song = songSelect.value;
+  const base = `canciones/${song}/`;
+
+  buffers.track = await loadBuffer(base + 'track.mp3');
+  buffers.voz1 = await loadBuffer(base + 'voz1.mp3');
+  buffers.voz2 = await loadBuffer(base + 'voz2.mp3');
+
+  pauseTime = 0;
+}
+
+function createSources(offset = 0) {
+  sources.track = audioCtx.createBufferSource();
+  sources.voz1 = audioCtx.createBufferSource();
+  sources.voz2 = audioCtx.createBufferSource();
+
+  sources.track.buffer = buffers.track;
+  sources.voz1.buffer = buffers.voz1;
+  sources.voz2.buffer = buffers.voz2;
+
+  sources.track.connect(gainTrack);
+  sources.voz1.connect(gainVoz1);
+  sources.voz2.connect(gainVoz2);
+
+  sources.track.start(0, offset);
+  sources.voz1.start(0, offset);
+  sources.voz2.start(0, offset);
+
+  startTime = audioCtx.currentTime - offset;
+}
+
+function play() {
+  if (!audioCtx) {
+    initAudio().then(play);
+    return;
+  }
+
+  if (isPlaying) return;
+
+  createSources(pauseTime);
+  isPlaying = true;
+}
+
+function pause() {
+  if (!isPlaying) return;
+
+  pauseTime = audioCtx.currentTime - startTime;
+
+  sources.track.stop();
+  sources.voz1.stop();
+  sources.voz2.stop();
+
+  isPlaying = false;
+}
+
+function seek(seconds) {
+  pause();
+  pauseTime = Math.max(0, pauseTime + seconds);
+  play();
+}
+
+songSelect.addEventListener('change', async () => {
+  if (!audioCtx) return;
+  pause();
+  await loadSong();
+});
+</script>
+
+</body>
+</html>
