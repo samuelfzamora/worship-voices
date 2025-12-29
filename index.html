@@ -107,6 +107,10 @@ select:disabled {
   <label>⏱ Progreso</label>
   <input id="progress" type="range" min="0" max="100" value="0">
 
+  <div id="timeDisplay" style="text-align:center; margin-top:6px; font-weight:bold;">
+  00:00 / 00:00
+  </div>
+
   <label>🎼 Track</label>
   <input type="range" min="0" max="1" step="0.01" value="1"
          oninput="gainTrack.gain.value = this.value">
@@ -136,6 +140,12 @@ const songSelect = document.getElementById('songSelect');
 const progress = document.getElementById('progress');
 const loading = document.getElementById('loading');
 const controls = document.querySelectorAll('button, input, select');
+
+function formatTime(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  return `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
 
 function setEnabled(enabled) {
   controls.forEach(el => el.disabled = !enabled);
@@ -173,6 +183,9 @@ async function loadSong() {
   buffers.voz2  = await loadBuffer(base + 'voz2.mp3');
 
   duration = buffers.track.duration;
+
+  document.getElementById('timeDisplay').innerText = `00:00 / ${formatTime(duration)}`;
+  
   progress.max = duration;
   progress.value = 0;
   pauseTime = 0;
@@ -213,8 +226,12 @@ function play() {
   isPlaying = true;
 
   progressInterval = setInterval(() => {
-    const current = audioCtx.currentTime - startTime;
-    progress.value = Math.min(current, duration);
+  const current = audioCtx.currentTime - startTime;
+  const safeCurrent = Math.min(current, duration);
+
+  progress.value = safeCurrent;
+  document.getElementById('timeDisplay').innerText =
+    `${formatTime(safeCurrent)} / ${formatTime(duration)}`;
   }, 200);
 }
 
@@ -239,6 +256,10 @@ function seek(seconds) {
 
 progress.addEventListener('input', () => {
   pauseTime = Number(progress.value);
+
+  document.getElementById('timeDisplay').innerText =
+    `${formatTime(pauseTime)} / ${formatTime(duration)}`;
+
   if (isPlaying) {
     pause();
     pauseTime = Number(progress.value);
