@@ -70,7 +70,7 @@ button.secondary {
 
   <label>Canción</label>
   <select id="songSelect">
-    <option value="asi-peleo">Así peleo mis batallas</option>
+    <option value="grande-es-el-senor">Grande es el Señor</option>
     <option value="santo-espiritu">Santo Espíritu</option>
   </select>
 
@@ -81,6 +81,13 @@ button.secondary {
     <button class="secondary" onclick="seek(-10)">⏪ -10s</button>
     <button class="secondary" onclick="seek(10)">⏩ +10s</button>
   </div>
+
+  <label>⏱ Progreso</label>
+  <input id="progress" type="range" min="0" max="100" value="0">
+
+  <label>🎼 Track</label>
+  <input type="range" min="0" max="1" step="0.01" value="1"
+         oninput="gainTrack.gain.value = this.value">
 
   <label>🎤 Voz 1</label>
   <input type="range" min="0" max="1" step="0.01" value="1"
@@ -100,8 +107,11 @@ let gainTrack, gainVoz1, gainVoz2;
 let startTime = 0;
 let pauseTime = 0;
 let isPlaying = false;
+let duration = 0;
+let progressInterval;
 
 const songSelect = document.getElementById('songSelect');
+const progress = document.getElementById('progress');
 
 async function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -109,6 +119,10 @@ async function initAudio() {
   gainTrack = audioCtx.createGain();
   gainVoz1 = audioCtx.createGain();
   gainVoz2 = audioCtx.createGain();
+
+  gainTrack.gain.value = 1;
+  gainVoz1.gain.value = 1;
+  gainVoz2.gain.value = 1;
 
   gainTrack.connect(audioCtx.destination);
   gainVoz1.connect(audioCtx.destination);
@@ -128,20 +142,23 @@ async function loadSong() {
   const base = `canciones/${song}/`;
 
   buffers.track = await loadBuffer(base + 'track.mp3');
-  buffers.voz1 = await loadBuffer(base + 'voz1.mp3');
-  buffers.voz2 = await loadBuffer(base + 'voz2.mp3');
+  buffers.voz1  = await loadBuffer(base + 'voz1.mp3');
+  buffers.voz2  = await loadBuffer(base + 'voz2.mp3');
 
+  duration = buffers.track.duration;
+  progress.max = duration;
+  progress.value = 0;
   pauseTime = 0;
 }
 
 function createSources(offset = 0) {
   sources.track = audioCtx.createBufferSource();
-  sources.voz1 = audioCtx.createBufferSource();
-  sources.voz2 = audioCtx.createBufferSource();
+  sources.voz1  = audioCtx.createBufferSource();
+  sources.voz2  = audioCtx.createBufferSource();
 
   sources.track.buffer = buffers.track;
-  sources.voz1.buffer = buffers.voz1;
-  sources.voz2.buffer = buffers.voz2;
+  sources.voz1.buffer  = buffers.voz1;
+  sources.voz2.buffer  = buffers.voz2;
 
   sources.track.connect(gainTrack);
   sources.voz1.connect(gainVoz1);
@@ -164,6 +181,11 @@ function play() {
 
   createSources(pauseTime);
   isPlaying = true;
+
+  progressInterval = setInterval(() => {
+    const current = audioCtx.currentTime - startTime;
+    progress.value = Math.min(current, duration);
+  }, 200);
 }
 
 function pause() {
@@ -175,14 +197,23 @@ function pause() {
   sources.voz1.stop();
   sources.voz2.stop();
 
+  clearInterval(progressInterval);
   isPlaying = false;
 }
 
 function seek(seconds) {
   pause();
-  pauseTime = Math.max(0, pauseTime + seconds);
+  pauseTime = Math.max(0, Math.min(duration, pauseTime + seconds));
   play();
 }
+
+progress.addEventListener('input', () => {
+  pauseTime = Number(progress.value);
+  if (isPlaying) {
+    pause();
+    play();
+  }
+});
 
 songSelect.addEventListener('change', async () => {
   if (!audioCtx) return;
