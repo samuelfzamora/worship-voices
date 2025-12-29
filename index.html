@@ -19,6 +19,7 @@ body {
   padding: 20px;
   border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0,0,0,.08);
+  position: relative;
 }
 
 h2 {
@@ -52,6 +53,12 @@ button.secondary {
   color: #333;
 }
 
+button:disabled,
+input:disabled,
+select:disabled {
+  opacity: 0.5;
+}
+
 .controls {
   display: flex;
   gap: 10px;
@@ -60,22 +67,37 @@ button.secondary {
 .controls button {
   flex: 1;
 }
+
+/* Overlay de carga */
+.loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  font-weight: bold;
+  font-size: 18px;
+}
 </style>
 </head>
 
 <body>
 
 <div class="card">
+  <div id="loading" class="loading">⏳ Cargando audios…</div>
+
   <h2>🎶 Práctica de Voces</h2>
 
   <label>Canción</label>
   <select id="songSelect">
-    <option value="asi-peleo">Así peleo mis batallas</option>
+    <option value="grande-es-el-senor">Grande es el Señor</option>
     <option value="santo-espiritu">Santo Espíritu</option>
   </select>
 
-  <button onclick="play()">▶ Play</button>
-  <button class="secondary" onclick="pause()">⏸ Pause</button>
+  <button id="playBtn" onclick="play()">▶ Play</button>
+  <button id="pauseBtn" class="secondary" onclick="pause()">⏸ Pause</button>
 
   <div class="controls">
     <button class="secondary" onclick="seek(-10)">⏪ -10s</button>
@@ -112,6 +134,12 @@ let progressInterval;
 
 const songSelect = document.getElementById('songSelect');
 const progress = document.getElementById('progress');
+const loading = document.getElementById('loading');
+const controls = document.querySelectorAll('button, input, select');
+
+function setEnabled(enabled) {
+  controls.forEach(el => el.disabled = !enabled);
+}
 
 async function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -119,10 +147,6 @@ async function initAudio() {
   gainTrack = audioCtx.createGain();
   gainVoz1 = audioCtx.createGain();
   gainVoz2 = audioCtx.createGain();
-
-  gainTrack.gain.value = 1;
-  gainVoz1.gain.value = 1;
-  gainVoz2.gain.value = 1;
 
   gainTrack.connect(audioCtx.destination);
   gainVoz1.connect(audioCtx.destination);
@@ -138,6 +162,9 @@ async function loadBuffer(url) {
 }
 
 async function loadSong() {
+  setEnabled(false);
+  loading.style.display = 'flex';
+
   const song = songSelect.value;
   const base = `canciones/${song}/`;
 
@@ -149,6 +176,9 @@ async function loadSong() {
   progress.max = duration;
   progress.value = 0;
   pauseTime = 0;
+
+  loading.style.display = 'none';
+  setEnabled(true);
 }
 
 function createSources(offset = 0) {
@@ -224,4 +254,3 @@ songSelect.addEventListener('change', async () => {
 
 </body>
 </html>
-
