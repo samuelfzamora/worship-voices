@@ -140,6 +140,13 @@ const progress = document.getElementById('progress');
 const loading = document.getElementById('loading');
 const controls = document.querySelectorAll('button, input, select');
 
+document.body.addEventListener('touchend', async () => {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+}, { once: true });
+
+
 function formatTime(seconds) {
   const min = Math.floor(seconds / 60);
   const sec = Math.floor(seconds % 60);
@@ -191,6 +198,8 @@ async function loadSong() {
 
   loading.style.display = 'none';
   setEnabled(true);
+  isPlaying = false;
+
 }
 
 function createSources(offset = 0) {
@@ -213,10 +222,14 @@ function createSources(offset = 0) {
   startTime = audioCtx.currentTime - offset;
 }
 
-function play() {
+async function play() {
   if (!audioCtx) {
-    initAudio().then(play);
-    return;
+    await initAudio();
+  }
+
+  // 🔑 CLAVE PARA SAFARI
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
   }
 
   if (isPlaying) return;
@@ -233,6 +246,7 @@ function play() {
     `${formatTime(safeCurrent)} / ${formatTime(duration)}`;
   }, 200);
 }
+
 
 function pause() {
   if (!isPlaying) return;
