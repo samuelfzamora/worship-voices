@@ -1,4 +1,4 @@
-const CACHE_NAME = 'worship-voces-v1';
+const CACHE_NAME = 'worship-voces-v2';
 
 const FILES_TO_CACHE = [
   '/',
@@ -31,6 +31,29 @@ self.addEventListener('activate', event => {
 
 // Intercepta requests
 self.addEventListener('fetch', event => {
+
+  // Solo cacheamos audios
+  if (event.request.url.endsWith('.mp3')) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(cache =>
+        cache.match(event.request).then(response => {
+
+          // Si ya está cacheado → usarlo
+          if (response) return response;
+
+          // Si no → descargar y guardar
+          return fetch(event.request).then(networkResponse => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+
+        })
+      )
+    );
+    return;
+  }
+
+  // Resto de archivos (html, js, css)
   event.respondWith(
     caches.match(event.request).then(response => {
       return response || fetch(event.request);
