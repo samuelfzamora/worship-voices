@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4a69bd">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Práctica de Voces – Worship</title>
@@ -286,6 +289,13 @@ songSelect.addEventListener('change', async () => {
   pause();
   await loadSong();
 });
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js')
+    .then(() => console.log('Service Worker registrado'))
+    .catch(err => console.error('SW error', err));
+}
+
 </script>
 
 </body>
